@@ -46,6 +46,31 @@ class Software_Renderer(object):
             for y in range(self.height)
         ]
 
+    def glGetRealXCoord(self, x):
+        dx = x * (self.viewport_width / 2)
+        real_x_viewport_coord = (self.viewport_width / 2) + dx
+        real_x_coord = real_x_viewport_coord + self.viewport_x_offset
+        return real_x_coord
+
+    def glGetRealYCoord(self, y):
+        dy = y * (self.viewport_height / 2)
+        real_y_viewport_coord = (self.viewport_height / 2) + dy
+        real_y_coord = real_y_viewport_coord + self.viewport_y_offset
+        return real_y_coord
+
+    def glGetNormalizedXCoord(self, real_x_coord):
+        real_x_viewport_coord = real_x_coord - self.viewport_x_offset
+        dx = real_x_viewport_coord - (self.viewport_width / 2)
+        x = dx / (self.viewport_width / 2)
+        return x
+
+    def glGetNormalizedYCoord(self, real_y_coord):
+        # get first normalized y coord for pos 0
+        real_y_viewport_coord = real_y_coord - self.viewport_y_offset
+        dy = real_y_viewport_coord - (self.viewport_height / 2)
+        y = dy / (self.viewport_height / 2)
+        return y
+
     def glVertex(self, x, y):
         if ((x >= -1 and x <= 1) and (y >= -1 and y <= 1)):
             # check x first            
@@ -81,6 +106,64 @@ class Software_Renderer(object):
 
         self.gl_color = color(r_converted, g_converted, b_converted)
 
+    def glLineLow(self, x0, y0, x1, y1):
+        dx = x1 - x0
+        dy = y1 - y0
+        yi = 1
+
+        if (dy < 0):
+            yi = -1
+            dy = -dy
+        
+        D = 2*dy - dx
+        y = y0
+
+        for x in range(x0, x1):            
+            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y))
+            if (D > 0):
+                y = y + yi
+                D = D - 2*dx
+            
+            D = D + 2*dy
+
+    def glLineHigh(self, x0, y0, x1, y1):
+        dx = x1 - x0
+        dy = y1 - y0
+        xi = 1
+
+        if (dx < 0):
+            xi = -1
+            dx = -dx
+        
+        D = 2*dx - dy
+        x = x0
+
+        for y in range(y0, y1):            
+            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y))
+            if (D > 0):
+                x = x + xi
+                D = D - 2*dy
+            
+            D = D + 2*dx
+
+    def glLine(self, x0, y0, x1, y1):
+        x0 = math.floor(self.glGetRealXCoord(x0))
+        y0 = math.floor(self.glGetRealYCoord(y0))
+        x1 = math.floor(self.glGetRealXCoord(x1))
+        y1 = math.floor(self.glGetRealYCoord(y1))        
+
+        if abs(y1 - y0) < abs(x1 - x0):
+            if (x0 > x1):
+                self.glLineLow(x1, y1, x0, y0)
+            else:
+                self.glLineLow(x0, y0, x1, y1)
+        else:
+            if (y0 > y1):
+                self.glLineHigh(x1, y1, x0, y0)
+            else:
+                self.glLineHigh(x0, y0, x1, y1)
+            
+
     def glFinish(self):
         f = open(self.filename, 'bw')
 
@@ -114,9 +197,10 @@ class Software_Renderer(object):
 # Example
 GL = Software_Renderer('render.bmp')
 GL.glInit()
-GL.glCreateWindow(600, 400)
-GL.glViewPort(0, 0, 600, 400)
+GL.glCreateWindow(1920, 1080)
+GL.glViewPort(0, 0, 1920, 1080)
 GL.glClear()
 GL.glColor(1, 0, 0)
 GL.glVertex(0,0)
+GL.glLine(0,0,1,1)
 GL.glFinish()

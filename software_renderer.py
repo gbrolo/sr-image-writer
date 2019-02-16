@@ -1,5 +1,6 @@
 import struct
 import math
+from object_loader import object_loader
 
 def char(c) :
     return struct.pack("=c", c.encode('ascii'))
@@ -163,6 +164,49 @@ class Software_Renderer(object):
             else:
                 self.glLineHigh(x0, y0, x1, y1)
             
+    def load(self, filename, translate, scale):
+        model = Obj(filename)
+
+        for face in model.faces:
+            vcount = len(face)
+
+            for j in range(vcount):
+                f1 = face[j][0]
+                f2 = face[(j + 1) % vcount][0]
+
+                v1 = model.vertices[f1 - 1]
+                v2 = model.vertices[f2 - 1]
+
+                x1 = v1[0] + translate[0] * scale[0]
+                y1 = v1[1] + translate[1] * scale[1]
+                x2 = v2[0] + translate[0] * scale[0]
+                y2 = v2[1] + translate[1] * scale[1]
+
+                self.glLine(x1, y1, x2, y2)
+
+    def glLoadObj(self, filename, scalefactor):
+        model = object_loader(filename)
+
+        for face in model.faces:
+            vcount = len(face)
+
+            for j in range(vcount):
+                f1 = face[j][0]
+                f2 = face[(j+1) % vcount][0]
+
+                v1 = model.vertices[f1 - 1]
+                v2 = model.vertices[f2 - 1]
+
+                print("f1, f2, v1, v2: " + str(f1) + ', ' + str(f2) +', ' + str(v1) + ', ' + str(v2))
+
+                x1 = v1[0] * scalefactor
+                y1 = v1[1] * scalefactor
+                x2 = v2[0] * scalefactor
+                y2 = v2[1] * scalefactor
+
+                self.glLine(x1, y1, x2, y2)
+
+
 
     def glFinish(self):
         f = open(self.filename, 'bw')
@@ -197,10 +241,11 @@ class Software_Renderer(object):
 # Example
 GL = Software_Renderer('render.bmp')
 GL.glInit()
-GL.glCreateWindow(1920, 1080)
-GL.glViewPort(0, 0, 1920, 1080)
+GL.glCreateWindow(800, 600)
+GL.glViewPort(0, 0, 800, 600)
 GL.glClear()
 GL.glColor(1, 0, 0)
-GL.glVertex(0,0)
-GL.glLine(0,0,1,1)
+# GL.glVertex(0,0)
+# GL.glLine(0,0,1,1)
+GL.glLoadObj('bobomb_centered.obj', 0.2)
 GL.glFinish()

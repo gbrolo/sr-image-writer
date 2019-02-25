@@ -1,6 +1,10 @@
 import struct
 import math
 from object_loader import object_loader
+from collections import namedtuple
+from polygon_math import *
+
+VERTEX_3 = namedtuple('Point3', ['x', 'y', 'z'])
 
 def char(c) :
     return struct.pack("=c", c.encode('ascii'))
@@ -72,7 +76,7 @@ class Software_Renderer(object):
         y = dy / (self.viewport_height / 2)
         return y
 
-    def glVertex(self, x, y):
+    def glVertex(self, x, y, color=None):
         if ((x >= -1 and x <= 1) and (y >= -1 and y <= 1)):
             # check x first            
             dx = x * (self.viewport_width / 2)
@@ -98,7 +102,7 @@ class Software_Renderer(object):
                     real_x_coord = self.width - 1
                 if (real_y_coord == self.height): 
                     real_y_coord = self.height - 1
-                self.pixels[math.floor(real_y_coord)][math.floor(real_x_coord)] = self.gl_color
+                self.pixels[math.floor(real_y_coord)][math.floor(real_x_coord)] = color or self.gl_color
 
     def glColor(self, r, g, b):
         r_converted = math.floor(r*255)
@@ -163,28 +167,8 @@ class Software_Renderer(object):
                 self.glLineHigh(x1, y1, x0, y0)
             else:
                 self.glLineHigh(x0, y0, x1, y1)
-            
-    def load(self, filename, translate, scale):
-        model = Obj(filename)
 
-        for face in model.faces:
-            vcount = len(face)
-
-            for j in range(vcount):
-                f1 = face[j][0]
-                f2 = face[(j + 1) % vcount][0]
-
-                v1 = model.vertices[f1 - 1]
-                v2 = model.vertices[f2 - 1]
-
-                x1 = v1[0] + translate[0] * scale[0]
-                y1 = v1[1] + translate[1] * scale[1]
-                x2 = v2[0] + translate[0] * scale[0]
-                y2 = v2[1] + translate[1] * scale[1]
-
-                self.glLine(x1, y1, x2, y2)
-
-    def glLoadObj(self, filename, scalefactor):
+    def glLoadObjWireFrame(self, filename, scalefactor):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -205,8 +189,114 @@ class Software_Renderer(object):
                 y2 = v2[1] * scalefactor
 
                 self.glLine(x1, y1, x2, y2)
+    
+    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1)):
+        model = object_loader(filename)
 
+        for face in model.faces:
+            print('face is: ' + str(face))
+            vcount = len(face)
 
+            if vcount == 3:
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
+
+                point_A = transform(model.vertices[f1], t, s)
+                point_B = transform(model.vertices[f2], t, s)
+                point_C = transform(model.vertices[f3], t, s)
+
+                normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))            
+                grey = round(255 * dot_product(normal, VERTEX_3(0,0,1)))
+
+                if grey < 0:
+                    continue  
+
+                print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
+                self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+            else:
+                # we have 4 faces (asuming we have a square to paint!)
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
+                f4 = face[3][0] - 1 
+
+                print('f1, f2, f3, f4: ' + str(f1) + ', ' + str(f2) + ', ' + str(f3) + ', ' + str(f4))  
+
+                vertices = [
+                    transform(model.vertices[f1], t, s),
+                    transform(model.vertices[f2], t, s),
+                    transform(model.vertices[f3], t, s),
+                    transform(model.vertices[f4], t, s)
+                ]
+
+                print('vertices: ' + str(vertices))
+
+                normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
+                grey = round(255 * dot_product(normal, VERTEX_3(0,0,1)))
+                if grey < 0:
+                    continue
+
+                point_A, point_B, point_C, point_D = vertices 
+                
+                print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
+                self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+
+    def glTriangle(self, point_A, point_B, point_C, color=None):
+        # swap points
+        if point_A.y > point_B.y:
+            point_A, point_B = point_B, point_A
+        if point_A.y > point_C.y:
+            point_A, point_C = point_C, point_A
+        if point_B.y > point_C.y: 
+            point_B, point_C = point_C, point_B
+
+        # changes in x and y in segment AC
+        dx_AC = point_C.x - point_A.x
+        dy_AC = point_C.y - point_A.y
+
+        if dy_AC == 0:
+            return
+
+        slope_AC = dx_AC/dy_AC
+
+        # changes in x and y in segment AB
+        dx_AB = point_B.x - point_A.x
+        dy_AB = point_B.y - point_A.y
+
+        if dy_AB != 0:
+            slope_AB = dx_AB/dy_AB
+
+            for y in range(point_A.y, point_B.y + 1):
+                xi = round(point_A.x - slope_AC * (point_A.y - y))
+                xf = round(point_A.x - slope_AB * (point_A.y - y))
+
+                # swap condition
+                if xi > xf:
+                    xi, xf = xf, xi
+                    
+                for x in range(xi, xf + 1):
+                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+
+        # changes in x and y in segment BC
+        dx_BC = point_C.x - point_B.x
+        dy_BC = point_C.y - point_B.y
+
+        if dy_BC:
+            slope_BC = dx_BC/dy_BC
+
+            for y in range(point_B.y, point_C.y + 1):
+                xi = round(point_A.x - slope_AC * (point_A.y - y))
+                xf = round(point_B.x - slope_BC * (point_B.y - y))
+
+                if xi > xf:
+                    xi, xf = xf, xi
+
+                for x in range(xi, xf + 1):
+                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
 
     def glFinish(self):
         f = open(self.filename, 'bw')
@@ -241,11 +331,12 @@ class Software_Renderer(object):
 # Example
 GL = Software_Renderer('render.bmp')
 GL.glInit()
-GL.glCreateWindow(800, 600)
-GL.glViewPort(0, 0, 800, 600)
+GL.glCreateWindow(1920, 1080)
+GL.glViewPort(0, 0, 1920, 1080)
 GL.glClear()
-GL.glColor(1, 0, 0)
+GL.glColor(1, 1, 1)
 # GL.glVertex(0,0)
 # GL.glLine(0,0,1,1)
-GL.glLoadObj('bobomb_centered.obj', 0.2)
+#GL.glLoadObjWireFrame('deer.obj', 0.0005)
+GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5))
 GL.glFinish()

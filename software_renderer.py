@@ -190,7 +190,7 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
     
-    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1)):
+    def glLoadObj(self, filename, zBuffer, t=(0,0,0), s=(1,1,1)):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -207,7 +207,7 @@ class Software_Renderer(object):
                 point_C = transform(model.vertices[f3], t, s)
 
                 normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))            
-                grey = round(255 * dot_product(normal, VERTEX_3(0,0,1)))
+                grey = self.glZBuffer(normal, zBuffer)
 
                 if grey < 0:
                     continue  
@@ -233,7 +233,7 @@ class Software_Renderer(object):
                 print('vertices: ' + str(vertices))
 
                 normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
-                grey = round(255 * dot_product(normal, VERTEX_3(0,0,1)))
+                grey = self.glZBuffer(normal, zBuffer)
                 if grey < 0:
                     continue
 
@@ -242,6 +242,9 @@ class Software_Renderer(object):
                 print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
                 self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
                 self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+
+    def glZBuffer(self, normal, zBuffer):
+        return round(255 * dot_product(normal, VERTEX_3(0,0,zBuffer)))
 
     def glTriangle(self, point_A, point_B, point_C, color=None):
         # swap points
@@ -338,5 +341,7 @@ GL.glColor(1, 1, 1)
 # GL.glVertex(0,0)
 # GL.glLine(0,0,1,1)
 #GL.glLoadObjWireFrame('deer.obj', 0.0005)
-GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5))
+
+# object, zBuffer value [between 0-1], translate, scale
+GL.glLoadObj('deer.obj', 0.8, (2000, 1200, 0), (0.5, 0.5, 0.5))
 GL.glFinish()

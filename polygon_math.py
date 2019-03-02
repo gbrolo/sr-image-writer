@@ -2,6 +2,7 @@ from collections import namedtuple
 
 VERTEX_2 = namedtuple('Point2', ['x', 'y'])
 VERTEX_3 = namedtuple('Point3', ['x', 'y', 'z'])
+OUTSIDE_P = -1, -1, -1
 
 def sum(v1, v2):
     return VERTEX_3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
@@ -39,4 +40,15 @@ def bounding_box(*vertices):
 
 def transform(v, t=(0,0,0), s=(1,1,1)):
         return VERTEX_3(round((v[0] + t[0]) * s[0]), round((v[1] + t[1]) * s[1]), round((v[2] + t[2]) * s[2]))
+
+def barycentric(vector_A, vector_B, vector_C, P):
+    b = cross_product(
+        VERTEX_3(vector_C.x - vector_A.x, vector_B.x - vector_A.x, vector_A.x - P.x), 
+        VERTEX_3(vector_C.y - vector_A.y, vector_B.y - vector_A.y, vector_A.y - P.y)
+    )
+
+    if abs(b[2]) < 1:
+        return OUTSIDE_P
+    else:
+        return (1 - (b[0] + b[1]) / b[2], b[1] / b[2], b[0] / b[2])
 

@@ -4,6 +4,7 @@ from object_loader import object_loader
 from collections import namedtuple
 from polygon_math import *
 
+VERTEX_2 = namedtuple('Point2', ['x', 'y'])
 VERTEX_3 = namedtuple('Point3', ['x', 'y', 'z'])
 
 def char(c) :
@@ -190,7 +191,7 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
     
-    def glLoadObj(self, filename, zBuffer, t=(0,0,0), s=(1,1,1)):
+    def glLoadObj(self, filename, zBuffer, t=(0,0,0), s=(1,1,1), bary=False):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -213,7 +214,11 @@ class Software_Renderer(object):
                     continue  
 
                 print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
-                self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                
+                if bary:
+                    self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                else:                    
+                    self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
             else:
                 # we have 4 faces (asuming we have a square to paint!)
                 f1 = face[0][0] - 1
@@ -240,8 +245,13 @@ class Software_Renderer(object):
                 point_A, point_B, point_C, point_D = vertices 
                 
                 print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
-                self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
-                self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                
+                if bary:
+                    self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                    self.glBarycentricTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                else:
+                    self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                    self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
 
     def glZBuffer(self, normal, zBuffer):
         return round(255 * dot_product(normal, VERTEX_3(0,0,zBuffer)))
@@ -301,6 +311,20 @@ class Software_Renderer(object):
                     print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
 
+    def glBarycentricTriangle(self, point_A, point_B, point_C, color=None):
+        print('bary method')
+        min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
+
+        for x in range(min_bounding_box.x, max_bounding_box.x + 1):
+            for y in range(min_bounding_box.y, max_bounding_box.y + 1):
+                b1, b2, b3 = barycentric(point_A, point_B, point_C, VERTEX_2(x, y))
+
+                if (b1 < 0) or (b2 < 0) or (b3 < 0):
+                    continue
+
+                print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+
     def glFinish(self):
         f = open(self.filename, 'bw')
 
@@ -343,5 +367,5 @@ GL.glColor(1, 1, 1)
 #GL.glLoadObjWireFrame('deer.obj', 0.0005)
 
 # object, zBuffer value [between 0-1], translate, scale
-GL.glLoadObj('deer.obj', 0.8, (2000, 1200, 0), (0.5, 0.5, 0.5))
+GL.glLoadObj('deer.obj', 0.8, (2000, 1200, 0), (0.5, 0.5, 0.5), True)
 GL.glFinish()

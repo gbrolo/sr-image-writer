@@ -41,6 +41,7 @@ class Software_Renderer(object):
 
     def glClear(self):
         self.glClearColor(0, 0, 0)
+        self.glSetZBuffer()
 
     def glClearColor(self, r, g, b): 
         r_converted = math.floor(r*255)
@@ -49,6 +50,12 @@ class Software_Renderer(object):
 
         self.pixels = [
             [color(r_converted, g_converted, b_converted) for x in range(self.width)]
+            for y in range(self.height)
+        ]
+
+    def glSetZBuffer(self, z='inf'):
+        self.zBuffer = [
+            [-float(z) for x in range(self.width)]
             for y in range(self.height)
         ]
 
@@ -191,7 +198,7 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
     
-    def glLoadObj(self, filename, intensity=1, t=(0,0,0), s=(1,1,1), bary=False):
+    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, bary=False):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -322,8 +329,12 @@ class Software_Renderer(object):
                 if (b1 < 0) or (b2 < 0) or (b3 < 0):
                     continue
 
-                print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+                z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
+
+                if z > self.zBuffer[y][x]:
+                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+                    self.zBuffer[y][x] = z
 
     def glFinish(self):
         f = open(self.filename, 'bw')
@@ -366,6 +377,6 @@ GL.glColor(1, 1, 1)
 # GL.glLine(0,0,1,1)
 #GL.glLoadObjWireFrame('deer.obj', 0.0005)
 
-# object, intensity value [between 0-1], translate, scale
-GL.glLoadObj('deer.obj', 0.8, (2000, 1200, 0), (0.5, 0.5, 0.5), True)
+# object, translate, scale, intensity value [between 0-1], barycentric method
+GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5), 0.8, True)
 GL.glFinish()

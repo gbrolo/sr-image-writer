@@ -103,7 +103,7 @@ class Software_Renderer(object):
                     real_x_coord = self.width - 1
                 if (real_y_coord == self.height): 
                     real_y_coord = self.height - 1
-                self.pixels[math.floor(real_y_coord)][math.floor(real_x_coord)] = color or self.gl_color
+                self.pixels[round(real_y_coord)][round(real_x_coord)] = color or self.gl_color
 
     def glColor(self, r, g, b):
         r_converted = math.floor(r*255)
@@ -191,7 +191,7 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
     
-    def glLoadObj(self, filename, zBuffer, t=(0,0,0), s=(1,1,1), bary=False):
+    def glLoadObj(self, filename, intensity=1, t=(0,0,0), s=(1,1,1), bary=False):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -208,7 +208,7 @@ class Software_Renderer(object):
                 point_C = transform(model.vertices[f3], t, s)
 
                 normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))            
-                grey = self.glZBuffer(normal, zBuffer)
+                grey = self.glShaderIntensity(normal, intensity)
 
                 if grey < 0:
                     continue  
@@ -238,7 +238,7 @@ class Software_Renderer(object):
                 print('vertices: ' + str(vertices))
 
                 normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
-                grey = self.glZBuffer(normal, zBuffer)
+                grey = self.glShaderIntensity(normal, intensity)
                 if grey < 0:
                     continue
 
@@ -253,8 +253,8 @@ class Software_Renderer(object):
                     self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
                     self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
 
-    def glZBuffer(self, normal, zBuffer):
-        return round(255 * dot_product(normal, VERTEX_3(0,0,zBuffer)))
+    def glShaderIntensity(self, normal, intensity):
+        return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))
 
     def glTriangle(self, point_A, point_B, point_C, color=None):
         # swap points
@@ -366,6 +366,6 @@ GL.glColor(1, 1, 1)
 # GL.glLine(0,0,1,1)
 #GL.glLoadObjWireFrame('deer.obj', 0.0005)
 
-# object, zBuffer value [between 0-1], translate, scale
+# object, intensity value [between 0-1], translate, scale
 GL.glLoadObj('deer.obj', 0.8, (2000, 1200, 0), (0.5, 0.5, 0.5), True)
 GL.glFinish()

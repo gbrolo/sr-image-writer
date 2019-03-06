@@ -1,6 +1,7 @@
 import struct
 import math
 from object_loader import object_loader
+from texture_loader import texture_loader
 from collections import namedtuple
 from polygon_math import *
 
@@ -39,8 +40,8 @@ class Software_Renderer(object):
         self.viewport_x_offset = x
         self.viewport_y_offset = y
 
-    def glClear(self):
-        self.glClearColor(0, 0, 0)
+    def glClear(self, r=0, g=0, b=0):
+        self.glClearColor(r, g, b)
         self.glSetZBuffer()
 
     def glClearColor(self, r, g, b): 
@@ -198,7 +199,7 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
     
-    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, bary=False):
+    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, bary=False, tex=None):
         model = object_loader(filename)
 
         for face in model.faces:
@@ -214,18 +215,34 @@ class Software_Renderer(object):
                 point_B = transform(model.vertices[f2], t, s)
                 point_C = transform(model.vertices[f3], t, s)
 
-                normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))            
+                normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
                 grey = self.glShaderIntensity(normal, intensity)
 
-                if grey < 0:
-                    continue  
-
                 print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
-                
-                if bary:
-                    self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                if not tex:
+                    if grey < 0:
+                        continue  
+
+                    if bary:
+                        self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                    else:                    
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
                 else:                    
-                    self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                    tex_A = VERTEX_3(*model.textures[face[0][1] - 1])
+                    tex_B = VERTEX_3(*model.textures[face[1][1] - 1])
+                    tex_C = VERTEX_3(*model.textures[face[2][1] - 1])
+
+                    tex_coords = (tex_A, tex_B, tex_C)
+                    tex_intensity = dot_product(normal, VERTEX_3(0,0,intensity))
+
+                    if bary:
+                        self.glBarycentricTriangle(
+                            point_A, point_B, point_C, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+
+
             else:
                 # we have 4 faces (asuming we have a square to paint!)
                 f1 = face[0][0] - 1
@@ -246,19 +263,43 @@ class Software_Renderer(object):
 
                 normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
                 grey = self.glShaderIntensity(normal, intensity)
-                if grey < 0:
-                    continue
 
                 point_A, point_B, point_C, point_D = vertices 
-                
+
                 print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
-                
-                if bary:
-                    self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
-                    self.glBarycentricTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                if not tex:
+                    if grey < 0:
+                        continue
+
+                    if bary:
+                        self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glBarycentricTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
                 else:
-                    self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
-                    self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                    tex_A = VERTEX_3(*model.textures[face[0][1] - 1])
+                    tex_B = VERTEX_3(*model.textures[face[1][1] - 1])
+                    tex_C = VERTEX_3(*model.textures[face[2][1] - 1])
+                    tex_D = VERTEX_3(*model.textures[face[3][1] - 1])
+
+                    tex_intensity = dot_product(normal, VERTEX_3(0,0,intensity))
+
+                    if bary:
+                        tex_coords = (tex_A, tex_B, tex_C)
+                        self.glBarycentricTriangle(
+                            point_A, point_B, point_C, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+
+                        tex_coords = (tex_A, tex_C, tex_D)
+                        self.glBarycentricTriangle(
+                            point_A, point_C, point_D, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+
+
 
     def glShaderIntensity(self, normal, intensity):
         return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))
@@ -318,7 +359,7 @@ class Software_Renderer(object):
                     print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
 
-    def glBarycentricTriangle(self, point_A, point_B, point_C, color=None):
+    def glBarycentricTriangle(self, point_A, point_B, point_C, color=None, tex=None, tex_coords=(), intensity=1):
         print('bary method')
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
 
@@ -329,8 +370,21 @@ class Software_Renderer(object):
                 if (b1 < 0) or (b2 < 0) or (b3 < 0):
                     continue
 
+                # apply textures
+                if tex:
+                    tex_v_A, tex_v_B, tex_v_C = tex_coords
+                    tex_x_pos = (tex_v_A.x * b1) + (tex_v_B.x * b2) + (tex_v_C.x * b3)
+                    tex_y_pos = (tex_v_A.y * b1) + (tex_v_B.y * b2) + (tex_v_C.y * b3)
+
+                    # replace default color with texture
+                    color = tex.get_texture_color(tex_x_pos, tex_y_pos, intensity)
+
                 z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
 
+                if x < 0 or y < 0:
+                    continue
+
+                # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
                 if z > self.zBuffer[y][x]:
                     print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
@@ -371,12 +425,15 @@ GL = Software_Renderer('render.bmp')
 GL.glInit()
 GL.glCreateWindow(1920, 1080)
 GL.glViewPort(0, 0, 1920, 1080)
-GL.glClear()
+GL.glClear(1, 1, 1)
 GL.glColor(1, 1, 1)
 # GL.glVertex(0,0)
 # GL.glLine(0,0,1,1)
 #GL.glLoadObjWireFrame('deer.obj', 0.0005)
 
 # object, translate, scale, intensity value [between 0-1], barycentric method
-GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5), 0.8, True)
+# GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5), 1, True)
+GL.glLoadObj('deer_2.obj', (17, 11, 0), (60, 60, 60), 1, True, texture_loader('deer.bmp'))
+
+# GL.glLoadObj('earth.obj', (800, 600, 0), (0.7, 0.7, 0.7), 1, True, texture_loader('earth.bmp'))
 GL.glFinish()

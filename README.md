@@ -1,3 +1,6 @@
-# SR: Image Writer
+# Software Renderer
 
-An image writer, part of the software redering engine, that creates a bmp image.
+A software renderer made in Python.
+
+## Examples
+Run ```render.py``` and comment/uncomment last lines for examples.

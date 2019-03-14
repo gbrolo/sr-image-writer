@@ -1,7 +1,5 @@
 import struct
-
-def color(r, g, b):
-    return bytes([b, g, r])
+from utils import color
 
 class texture_loader(object):
     def __init__(self, filename):

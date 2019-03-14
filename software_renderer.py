@@ -1,24 +1,10 @@
 import struct
 import math
+from utils import *
 from object_loader import object_loader
 from texture_loader import texture_loader
 from collections import namedtuple
 from polygon_math import *
-
-VERTEX_2 = namedtuple('Point2', ['x', 'y'])
-VERTEX_3 = namedtuple('Point3', ['x', 'y', 'z'])
-
-def char(c) :
-    return struct.pack("=c", c.encode('ascii'))
-
-def word(w) :
-    return struct.pack("=h", w)
-
-def dword(d) :
-    return struct.pack("=l", d)
-
-def color(r, g, b):
-    return bytes([b, g, r])
 
 class Software_Renderer(object):
     def __init__(self, filename):
@@ -78,8 +64,7 @@ class Software_Renderer(object):
         x = dx / (self.viewport_width / 2)
         return x
 
-    def glGetNormalizedYCoord(self, real_y_coord):
-        # get first normalized y coord for pos 0
+    def glGetNormalizedYCoord(self, real_y_coord):        
         real_y_viewport_coord = real_y_coord - self.viewport_y_offset
         dy = real_y_viewport_coord - (self.viewport_height / 2)
         y = dy / (self.viewport_height / 2)
@@ -190,7 +175,7 @@ class Software_Renderer(object):
                 v1 = model.vertices[f1 - 1]
                 v2 = model.vertices[f2 - 1]
 
-                print("f1, f2, v1, v2: " + str(f1) + ', ' + str(f2) +', ' + str(v1) + ', ' + str(v2))
+                # print("f1, f2, v1, v2: " + str(f1) + ', ' + str(f2) +', ' + str(v1) + ', ' + str(v2))
 
                 x1 = v1[0] * scalefactor
                 y1 = v1[1] * scalefactor
@@ -198,12 +183,47 @@ class Software_Renderer(object):
                 y2 = v2[1] * scalefactor
 
                 self.glLine(x1, y1, x2, y2)
-    
+
+    def glLoadTexture(self, filename, scalefactor):
+        texture = texture_loader(filename)
+        
+        for y in range(texture.height):
+            for x in range(texture.width):
+                tex_color = texture.get_texture_color(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y))
+                # print(tex_color)
+                self.glVertex(self.glGetNormalizedXCoord(x*scalefactor), self.glGetNormalizedYCoord(y*scalefactor), tex_color)
+
+    def glLoadObjWireFrameUV(self, filename, scalefactor, t):
+        model = object_loader(filename)              
+
+        # for vt in model.textures:     
+        #     print((vt[0] * scalefactor) - 0.5, (vt[1] * scalefactor) - 0.5)
+        #     self.glVertex((vt[0] * scalefactor) - 0.5, (vt[1] * scalefactor) - 0.5)
+
+        for face in model.faces:
+            vcount = len(face)
+
+            for j in range(vcount):
+                f1 = face[j][1]
+                f2 = face[(j+1) % vcount][1]
+
+                v1 = model.textures[f1 - 1]
+                v2 = model.textures[f2 - 1]
+
+                # print("f1, f2, v1, v2: " + str(f1) + ', ' + str(f2) +', ' + str(v1) + ', ' + str(v2))
+
+                x1 = (v1[0] * scalefactor) - t
+                y1 = (v1[1] * scalefactor) - t
+                x2 = (v2[0] * scalefactor) - t
+                y2 = (v2[1] * scalefactor) - t
+
+                self.glLine(x1, y1, x2, y2)
+ 
     def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, bary=False, tex=None):
         model = object_loader(filename)
 
         for face in model.faces:
-            print('face is: ' + str(face))
+            # print('face is: ' + str(face))
             vcount = len(face)
 
             if vcount == 3:
@@ -218,7 +238,7 @@ class Software_Renderer(object):
                 normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
                 grey = self.glShaderIntensity(normal, intensity)
 
-                print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
+                # print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
                 if not tex:
                     if grey < 0:
                         continue  
@@ -250,7 +270,7 @@ class Software_Renderer(object):
                 f3 = face[2][0] - 1
                 f4 = face[3][0] - 1 
 
-                print('f1, f2, f3, f4: ' + str(f1) + ', ' + str(f2) + ', ' + str(f3) + ', ' + str(f4))  
+                # print('f1, f2, f3, f4: ' + str(f1) + ', ' + str(f2) + ', ' + str(f3) + ', ' + str(f4))  
 
                 vertices = [
                     transform(model.vertices[f1], t, s),
@@ -259,14 +279,14 @@ class Software_Renderer(object):
                     transform(model.vertices[f4], t, s)
                 ]
 
-                print('vertices: ' + str(vertices))
+                # print('vertices: ' + str(vertices))
 
                 normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
                 grey = self.glShaderIntensity(normal, intensity)
 
                 point_A, point_B, point_C, point_D = vertices 
 
-                print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
+                # print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
                 if not tex:
                     if grey < 0:
                         continue
@@ -298,8 +318,6 @@ class Software_Renderer(object):
                     else:
                         self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
                         self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
-
-
 
     def glShaderIntensity(self, normal, intensity):
         return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))
@@ -338,7 +356,7 @@ class Software_Renderer(object):
                     xi, xf = xf, xi
                     
                 for x in range(xi, xf + 1):
-                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
 
         # changes in x and y in segment BC
@@ -356,11 +374,11 @@ class Software_Renderer(object):
                     xi, xf = xf, xi
 
                 for x in range(xi, xf + 1):
-                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
 
     def glBarycentricTriangle(self, point_A, point_B, point_C, color=None, tex=None, tex_coords=(), intensity=1):
-        print('bary method')
+        # print('bary method')
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
 
         for x in range(min_bounding_box.x, max_bounding_box.x + 1):
@@ -386,7 +404,7 @@ class Software_Renderer(object):
 
                 # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
                 if z > self.zBuffer[y][x]:
-                    print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
                     self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
                     self.zBuffer[y][x] = z
 
@@ -419,21 +437,3 @@ class Software_Renderer(object):
                 f.write(self.pixels[x][y])
 
         f.close()
-
-# Example
-GL = Software_Renderer('render.bmp')
-GL.glInit()
-GL.glCreateWindow(1920, 1080)
-GL.glViewPort(0, 0, 1920, 1080)
-GL.glClear(1, 1, 1)
-GL.glColor(1, 1, 1)
-# GL.glVertex(0,0)
-# GL.glLine(0,0,1,1)
-#GL.glLoadObjWireFrame('deer.obj', 0.0005)
-
-# object, translate, scale, intensity value [between 0-1], barycentric method
-# GL.glLoadObj('deer.obj', (2000, 1200, 0), (0.5, 0.5, 0.5), 1, True)
-GL.glLoadObj('deer_2.obj', (17, 11, 0), (60, 60, 60), 1, True, texture_loader('deer.bmp'))
-
-# GL.glLoadObj('earth.obj', (800, 600, 0), (0.7, 0.7, 0.7), 1, True, texture_loader('earth.bmp'))
-GL.glFinish()

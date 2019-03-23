@@ -220,22 +220,24 @@ class Software_Renderer(object):
 
     def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, tex=None):
         model = object_loader(filename)
-        self.active_tex = tex
+        if tex:
+            self.active_tex = tex
+            
+        vertex_buffer = []
         
         for face in model.faces:
             vcount = len(face)
 
             for vertex in range(vcount):
-                transformed_vertex = transform(model.vertices[face[vertex][0] - 1], t, s)
-                self.vertex_buffer.append(transformed_vertex)
+                transformed_vertex = transform(model.vertices[face[vertex][0]], t, s)
+                vertex_buffer.append(transformed_vertex)
 
             if self.active_tex:
                 for vertex in range(vcount):
-                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1] - 1])
-                    self.vertex_buffer.append(tex_vertex)
+                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1]])
+                    vertex_buffer.append(tex_vertex)
 
-        self.active_v_array = iter(self.vertex_buffer)
-        self.vertex_buffer = []
+        self.active_v_array = iter(vertex_buffer)        
 
         try:
             while True:
@@ -249,20 +251,16 @@ class Software_Renderer(object):
     def glBarycentricTriangle(self, intensity=1):        
         point_A = next(self.active_v_array)
         point_B = next(self.active_v_array)
-        point_C = next(self.active_v_array)
-
-        print(point_A, point_B, point_C)
+        point_C = next(self.active_v_array)        
 
         # if we have textures
-        # if self.active_tex:
-        #     tex_v_A = next(self.active_v_array)
-        #     tex_v_B = next(self.active_v_array)
-        #     tex_v_C = next(self.active_v_array)
+        if self.active_tex:
+            tex_v_A = next(self.active_v_array)
+            tex_v_B = next(self.active_v_array)
+            tex_v_C = next(self.active_v_array)
 
         # bounding boxes for bary
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
-        print('bbox')
-        print(min_bounding_box, max_bounding_box)
 
         normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
         grey = self.glShaderIntensity(normal, intensity)
@@ -279,30 +277,37 @@ class Software_Renderer(object):
                     continue                
 
                 # apply textures
-                if self.active_tex:
-                    tex_v_A = next(self.active_v_array)
-                    tex_v_B = next(self.active_v_array)
-                    tex_v_C = next(self.active_v_array)   
-
+                if self.active_tex:  
                     tex_x_pos = (tex_v_A.x * b1) + (tex_v_B.x * b2) + (tex_v_C.x * b3)
                     tex_y_pos = (tex_v_A.y * b1) + (tex_v_B.y * b2) + (tex_v_C.y * b3)
 
                     # replace default color with texture
-                    color = self.active_tex.get_texture_color(tex_x_pos, tex_y_pos, tex_intensity)
+                    colour = self.active_tex.get_texture_color(tex_x_pos, tex_y_pos, tex_intensity)
+
+                    z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
+
+                    if x < 0 or y < 0:
+                        continue
+
+                    # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
+                    if z > self.zBuffer[y][x]:
+                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), colour)
+                        self.zBuffer[y][x] = z
                 else:
                     if grey < 0:
-                        color = grey
+                        continue
 
-                z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
+                    z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
 
-                if x < 0 or y < 0:
-                    continue
+                    if x < 0 or y < 0:
+                        continue
 
-                # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
-                if z > self.zBuffer[y][x]:
-                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
-                    self.zBuffer[y][x] = z
+                    # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
+                    if z > self.zBuffer[y][x]:
+                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color(grey, grey, grey))
+                        self.zBuffer[y][x] = z
 
     def glFinish(self):
         f = open(self.filename, 'bw')

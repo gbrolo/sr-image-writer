@@ -1,5 +1,6 @@
 from software_renderer import Software_Renderer
 from texture_loader import texture_loader
+from polygon_math import VERTEX_3
 
 GL = Software_Renderer('render.bmp')
 
@@ -13,14 +14,20 @@ def init_renderer():
 ############################################### DRAWING FUNCTIONS ############################################
 def draw_deer_centered():
     obj = 'deer/deer.obj'
-    translate = (17, 11, 0)
-    scale = (60, 60, 60)
+    translate = (0, 0, 0)
+    scale = (0.1, 0.1, 0.1)
+    rotate = (0, 25, 0)
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     
     init_renderer()
-    GL.glLoadObj(obj, translate, scale, intensity, texture)
+    GL.glLookAt(
+        VERTEX_3(12, 1, 0), 
+        VERTEX_3(0, 0, 0), 
+        VERTEX_3(1, 1, 0)
+    )
+    GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
     GL.glFinish()
 
     print('Output rendered to:  \'render.bmp\'')

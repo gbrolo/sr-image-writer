@@ -1,5 +1,6 @@
 import struct
 import math
+from math import cos, sin
 from utils import *
 from object_loader import object_loader
 from texture_loader import texture_loader
@@ -218,7 +219,10 @@ class Software_Renderer(object):
 
                 self.glLine(x1, y1, x2, y2)
 
-    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, tex=None):
+    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), r=(0,0,0), intensity=1, tex=None):
+
+        self.glLoadModelMatrix(t, s, r)
+
         model = object_loader(filename)
         if tex:
             self.active_tex = tex
@@ -226,15 +230,19 @@ class Software_Renderer(object):
         vertex_buffer = []
         
         for face in model.faces:
-            vcount = len(face)
-
-            for vertex in range(vcount):
-                transformed_vertex = transform(model.vertices[face[vertex][0]], t, s)
+            for fi in face:
+                transformed_vertex = matrix_transform(
+                    VERTEX_3(*model.vertices[fi[0]]),
+                    self.ViewPortMatrix,
+                    self.ProjectionMatrix,
+                    self.ViewMatrix,
+                    self.ModelMatrix
+                )
                 vertex_buffer.append(transformed_vertex)
 
             if self.active_tex:
-                for vertex in range(vcount):
-                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1]])
+                for fi in face:
+                    tex_vertex = VERTEX_3(*model.textures[fi[1]])
                     vertex_buffer.append(tex_vertex)
 
         self.active_v_array = iter(vertex_buffer)        
@@ -244,6 +252,94 @@ class Software_Renderer(object):
                 self.glBarycentricTriangle()
         except StopIteration:
                 pass
+
+    def glLookAt(self, e, c, u):
+        z = vector_normal(sub(e, c))
+        x = vector_normal(cross_product(u, z))
+        y = vector_normal(cross_product(z, x))
+
+        self.glLoadViewMatrix(x, y, z, c)
+        self.glLoadProjectionMatrix(-1 / vector_length(sub(e, c)))
+        self.glLoadViewPortMatrix()
+
+    def glLoadModelMatrix(self, t=(0,0,0), s=(1,1,1), r=(0,0,0)):
+        t = VERTEX_3(*t)
+        s = VERTEX_3(*s)
+        r = VERTEX_3(*r)
+
+        translation_matrix = np.matrix([
+            [1, 0, 0, t.x],
+            [0, 1, 0, t.y],
+            [0, 0, 1, t.z],
+            [0, 0, 0,   1]
+        ])
+
+        a = r.x
+        r_matrix_x = np.matrix([
+            [1,          0,          0,  0],
+            [0,     cos(a),    -sin(a),  0],
+            [0,     sin(a),     cos(a),  0],
+            [0,          0,          0,  1]
+        ])
+
+        a = r.y
+        r_matrix_y = np.matrix([
+            [cos(a),    0,  -sin(a),    0],
+            [     0,    1,        0,    0],
+            [-sin(a),   0,   cos(a),    0],
+            [0,         0,        0,    1]
+        ])
+
+        a = r.z
+        r_matrix_z = np.matrix([
+            [cos(a),    -sin(a),    0,  0],
+            [sin(a),     cos(a),    0,  0],
+            [     0,          0,    1,  0],
+            [     0,          0,    0,  1]
+        ])
+
+        rotation_matrix = r_matrix_x @ r_matrix_y @ r_matrix_z
+        scale_matrix = np.matrix([
+            [s.x,     0,      0,    0],
+            [  0,   s.y,      0,    0],
+            [  0,     0,    s.z,    0],
+            [  0,     0,      0,    1]
+        ])
+
+        self.ModelMatrix = translation_matrix @ rotation_matrix @ scale_matrix
+
+    def glLoadViewMatrix(self, i, j, k, c):
+        M = np.matrix([
+            [i.x,   i.y,    i.z,    0],
+            [j.x,   j.y,    j.z,    0],
+            [k.x,   k.y,    k.z,    0],
+            [  0,     0,      0,    1]
+        ])
+
+        O = np.matrix([
+            [1, 0, 0, -c.x],
+            [0, 1, 0, -c.y],
+            [0, 0, 1, -c.z],
+            [0, 0, 0,    1]
+        ])
+
+        self.ViewMatrix = M @ O
+
+    def glLoadProjectionMatrix(self, k):
+        self.ProjectionMatrix = np.matrix([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, k, 1]
+        ])
+
+    def glLoadViewPortMatrix(self):
+        self.ViewPortMatrix = np.matrix([
+            [self.width / 2,                  0,      0,     self.width / 2],
+            [             0,    self.height / 2,      0,    self.height / 2],
+            [             0,                  0,    128,                128],
+            [             0,                  0,      0,                  1]
+        ])
 
     def glShaderIntensity(self, normal, intensity):
         return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))
@@ -261,6 +357,8 @@ class Software_Renderer(object):
 
         # bounding boxes for bary
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
+
+        print('bboxes', min_bounding_box, max_bounding_box)
 
         normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
         grey = self.glShaderIntensity(normal, intensity)
@@ -290,10 +388,13 @@ class Software_Renderer(object):
                         continue
 
                     # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
-                    if z > self.zBuffer[y][x]:
-                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), colour)
-                        self.zBuffer[y][x] = z
+                    try:
+                        if z > self.zBuffer[y][x]:
+                            # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), colour)
+                            self.zBuffer[y][x] = z
+                    except:
+                        pass
                 else:
                     if grey < 0:
                         continue
@@ -304,10 +405,13 @@ class Software_Renderer(object):
                         continue
 
                     # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
-                    if z > self.zBuffer[y][x]:
-                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color(grey, grey, grey))
-                        self.zBuffer[y][x] = z
+                    try:
+                        if z > self.zBuffer[y][x]:
+                            # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color(grey, grey, grey))
+                            self.zBuffer[y][x] = z
+                    except:
+                        pass
 
     def glFinish(self):
         f = open(self.filename, 'bw')

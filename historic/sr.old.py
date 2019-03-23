@@ -15,13 +15,6 @@ class Software_Renderer(object):
     def glInit(self):
         self.pixels = []
         self.gl_color = color(255, 255, 255)
-        self.glInitTexParams()
-
-    def glInitTexParams(self):
-        self.tex = None
-        self.active_v_array = None
-        self.active_tex = None
-        self.vertex_buffer = []
 
     def glCreateWindow(self, width, height):
         self.width = width
@@ -89,7 +82,13 @@ class Software_Renderer(object):
 
             # now add viewport offsets
             real_x_coord = real_x_viewport_coord + self.viewport_x_offset
-            real_y_coord = real_y_viewport_coord + self.viewport_y_offset           
+            real_y_coord = real_y_viewport_coord + self.viewport_y_offset
+
+            # print("real_x_coord: ")
+            # print(math.floor(real_x_coord))
+
+            # print("real_y_coord: ")
+            # print(math.floor(real_y_coord))            
 
             # draw only if inside picture dimensions
             if ((real_x_coord <= self.width) and (real_y_coord <= self.height)):
@@ -174,7 +173,9 @@ class Software_Renderer(object):
                 f2 = face[(j+1) % vcount][0]
 
                 v1 = model.vertices[f1 - 1]
-                v2 = model.vertices[f2 - 1]                
+                v2 = model.vertices[f2 - 1]
+
+                # print("f1, f2, v1, v2: " + str(f1) + ', ' + str(f2) +', ' + str(v1) + ', ' + str(v2))
 
                 x1 = v1[0] * scalefactor
                 y1 = v1[1] * scalefactor
@@ -217,97 +218,195 @@ class Software_Renderer(object):
                 y2 = (v2[1] * scalefactor) - t
 
                 self.glLine(x1, y1, x2, y2)
-
-    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, tex=None):
+ 
+    def glLoadObj(self, filename, t=(0,0,0), s=(1,1,1), intensity=1, bary=False, tex=None):
         model = object_loader(filename)
-        if tex:
-            self.active_tex = tex
-            
-        vertex_buffer = []
-        
+
         for face in model.faces:
+            # print('face is: ' + str(face))
             vcount = len(face)
 
-            for vertex in range(vcount):
-                transformed_vertex = transform(model.vertices[face[vertex][0] - 1], t, s)
-                vertex_buffer.append(transformed_vertex)
+            if vcount == 3:
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
 
-            if self.active_tex:
-                for vertex in range(vcount):
-                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1] - 1])
-                    vertex_buffer.append(tex_vertex)
+                point_A = transform(model.vertices[f1], t, s)
+                point_B = transform(model.vertices[f2], t, s)
+                point_C = transform(model.vertices[f3], t, s)
 
-        self.active_v_array = iter(vertex_buffer)        
+                normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
+                grey = self.glShaderIntensity(normal, intensity)
 
-        try:
-            while True:
-                self.glBarycentricTriangle()
-        except StopIteration:
-                pass
+                # print('about to draw triangle at points: (A,B,C)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C))
+                if not tex:
+                    if grey < 0:
+                        continue  
+
+                    if bary:
+                        self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                    else:                    
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                else:                    
+                    tex_A = VERTEX_3(*model.textures[face[0][1] - 1])
+                    tex_B = VERTEX_3(*model.textures[face[1][1] - 1])
+                    tex_C = VERTEX_3(*model.textures[face[2][1] - 1])
+
+                    tex_coords = (tex_A, tex_B, tex_C)
+                    tex_intensity = dot_product(normal, VERTEX_3(0,0,intensity))
+
+                    if bary:
+                        self.glBarycentricTriangle(
+                            point_A, point_B, point_C, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+
+
+            else:
+                # we have 4 faces (asuming we have a square to paint!)
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
+                f4 = face[3][0] - 1 
+
+                # print('f1, f2, f3, f4: ' + str(f1) + ', ' + str(f2) + ', ' + str(f3) + ', ' + str(f4))  
+
+                vertices = [
+                    transform(model.vertices[f1], t, s),
+                    transform(model.vertices[f2], t, s),
+                    transform(model.vertices[f3], t, s),
+                    transform(model.vertices[f4], t, s)
+                ]
+
+                # print('vertices: ' + str(vertices))
+
+                normal = vector_normal(cross_product(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))                
+                grey = self.glShaderIntensity(normal, intensity)
+
+                point_A, point_B, point_C, point_D = vertices 
+
+                # print('about to draw 2 triangles at points: (A,B,C,D)' + str(point_A) + ', ' + str(point_B) + ', ' + str(point_C) + ', ' + str(point_D))
+                if not tex:
+                    if grey < 0:
+                        continue
+
+                    if bary:
+                        self.glBarycentricTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glBarycentricTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
+                else:
+                    tex_A = VERTEX_3(*model.textures[face[0][1] - 1])
+                    tex_B = VERTEX_3(*model.textures[face[1][1] - 1])
+                    tex_C = VERTEX_3(*model.textures[face[2][1] - 1])
+                    tex_D = VERTEX_3(*model.textures[face[3][1] - 1])
+
+                    tex_intensity = dot_product(normal, VERTEX_3(0,0,intensity))
+
+                    if bary:
+                        tex_coords = (tex_A, tex_B, tex_C)
+                        self.glBarycentricTriangle(
+                            point_A, point_B, point_C, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+
+                        tex_coords = (tex_A, tex_C, tex_D)
+                        self.glBarycentricTriangle(
+                            point_A, point_C, point_D, tex=tex, tex_coords=tex_coords, intensity=tex_intensity
+                        )
+                    else:
+                        self.glTriangle(point_A, point_B, point_C, color(grey, grey, grey))
+                        self.glTriangle(point_A, point_C, point_D, color(grey, grey, grey))
 
     def glShaderIntensity(self, normal, intensity):
         return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))
 
-    def glBarycentricTriangle(self, intensity=1):        
-        point_A = next(self.active_v_array)
-        point_B = next(self.active_v_array)
-        point_C = next(self.active_v_array)        
+    def glTriangle(self, point_A, point_B, point_C, color=None):
+        # swap points
+        if point_A.y > point_B.y:
+            point_A, point_B = point_B, point_A
+        if point_A.y > point_C.y:
+            point_A, point_C = point_C, point_A
+        if point_B.y > point_C.y: 
+            point_B, point_C = point_C, point_B
 
-        # if we have textures
-        if self.active_tex:
-            tex_v_A = next(self.active_v_array)
-            tex_v_B = next(self.active_v_array)
-            tex_v_C = next(self.active_v_array)
+        # changes in x and y in segment AC
+        dx_AC = point_C.x - point_A.x
+        dy_AC = point_C.y - point_A.y
 
-        # bounding boxes for bary
-        min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
-
-        normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
-        grey = self.glShaderIntensity(normal, intensity)
-        tex_intensity = dot_product(normal, VERTEX_3(0,0,intensity))
-
-        if tex_intensity < 0:
+        if dy_AC == 0:
             return
+
+        slope_AC = dx_AC/dy_AC
+
+        # changes in x and y in segment AB
+        dx_AB = point_B.x - point_A.x
+        dy_AB = point_B.y - point_A.y
+
+        if dy_AB != 0:
+            slope_AB = dx_AB/dy_AB
+
+            for y in range(point_A.y, point_B.y + 1):
+                xi = round(point_A.x - slope_AC * (point_A.y - y))
+                xf = round(point_A.x - slope_AB * (point_A.y - y))
+
+                # swap condition
+                if xi > xf:
+                    xi, xf = xf, xi
+                    
+                for x in range(xi, xf + 1):
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+
+        # changes in x and y in segment BC
+        dx_BC = point_C.x - point_B.x
+        dy_BC = point_C.y - point_B.y
+
+        if dy_BC:
+            slope_BC = dx_BC/dy_BC
+
+            for y in range(point_B.y, point_C.y + 1):
+                xi = round(point_A.x - slope_AC * (point_A.y - y))
+                xf = round(point_B.x - slope_BC * (point_B.y - y))
+
+                if xi > xf:
+                    xi, xf = xf, xi
+
+                for x in range(xi, xf + 1):
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+
+    def glBarycentricTriangle(self, point_A, point_B, point_C, color=None, tex=None, tex_coords=(), intensity=1):
+        # print('bary method')
+        min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
 
         for x in range(min_bounding_box.x, max_bounding_box.x + 1):
             for y in range(min_bounding_box.y, max_bounding_box.y + 1):
                 b1, b2, b3 = barycentric(point_A, point_B, point_C, VERTEX_2(x, y))
 
                 if (b1 < 0) or (b2 < 0) or (b3 < 0):
-                    continue                
+                    continue
 
                 # apply textures
-                if self.active_tex:  
+                if tex:
+                    tex_v_A, tex_v_B, tex_v_C = tex_coords
                     tex_x_pos = (tex_v_A.x * b1) + (tex_v_B.x * b2) + (tex_v_C.x * b3)
                     tex_y_pos = (tex_v_A.y * b1) + (tex_v_B.y * b2) + (tex_v_C.y * b3)
 
                     # replace default color with texture
-                    colour = self.active_tex.get_texture_color(tex_x_pos, tex_y_pos, tex_intensity)
+                    color = tex.get_texture_color(tex_x_pos, tex_y_pos, intensity)
 
-                    z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
+                z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
 
-                    if x < 0 or y < 0:
-                        continue
+                if x < 0 or y < 0:
+                    continue
 
-                    # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
-                    if z > self.zBuffer[y][x]:
-                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), colour)
-                        self.zBuffer[y][x] = z
-                else:
-                    if grey < 0:
-                        continue
-
-                    z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
-
-                    if x < 0 or y < 0:
-                        continue
-
-                    # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
-                    if z > self.zBuffer[y][x]:
-                        # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                        self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color(grey, grey, grey))
-                        self.zBuffer[y][x] = z
+                # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
+                if z > self.zBuffer[y][x]:
+                    # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
+                    self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color)
+                    self.zBuffer[y][x] = z
 
     def glFinish(self):
         f = open(self.filename, 'bw')

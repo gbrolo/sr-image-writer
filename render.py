@@ -15,13 +15,12 @@ def draw_deer_centered():
     obj = 'deer/deer.obj'
     translate = (17, 11, 0)
     scale = (60, 60, 60)
-    intensity = 1
-    barycentric = True
+    intensity = 1    
     texture = texture_loader('deer/deer.bmp')
-    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale) + '\nbarycentric:   ' + str(barycentric))
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     
     init_renderer()
-    GL.glLoadObj(obj, translate, scale, intensity, barycentric, texture)
+    GL.glLoadObj(obj, translate, scale, intensity, texture)
     GL.glFinish()
 
     print('Output rendered to:  \'render.bmp\'')
@@ -31,22 +30,20 @@ def draw_deer_two_sides():
     translate = (8, 11, 0)
     scale = (60, 60, 60)
     intensity = 1
-    barycentric = True
     texture = texture_loader('deer/deer.bmp')
-    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale) + '\nbarycentric:   ' + str(barycentric))
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     
     init_renderer()
-    GL.glLoadObj(obj, translate, scale, intensity, barycentric, texture)
+    GL.glLoadObj(obj, translate, scale, intensity, texture)
 
     obj = 'deer/deer_reverse.obj'
     translate = (20, 11, 0)
     scale = (60, 60, 60)
     intensity = 1
-    barycentric = True
     texture = texture_loader('deer/deer.bmp')
-    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale) + '\nbarycentric:   ' + str(barycentric))
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     
-    GL.glLoadObj(obj, translate, scale, intensity, barycentric, texture)
+    GL.glLoadObj(obj, translate, scale, intensity, texture)
     GL.glFinish()
 
     print('Output rendered to:  \'render.bmp\'')

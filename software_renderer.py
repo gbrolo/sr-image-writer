@@ -229,12 +229,12 @@ class Software_Renderer(object):
             vcount = len(face)
 
             for vertex in range(vcount):
-                transformed_vertex = transform(model.vertices[face[vertex][0] - 1], t, s)
+                transformed_vertex = transform(model.vertices[face[vertex][0]], t, s)
                 vertex_buffer.append(transformed_vertex)
 
             if self.active_tex:
                 for vertex in range(vcount):
-                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1] - 1])
+                    tex_vertex = VERTEX_3(*model.textures[face[vertex][1]])
                     vertex_buffer.append(tex_vertex)
 
         self.active_v_array = iter(vertex_buffer)        

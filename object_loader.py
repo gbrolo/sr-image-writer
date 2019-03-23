@@ -1,3 +1,9 @@
+def facePosMinus1(f, b=10, value=None):
+    try:
+        return int(f, b) - 1
+    except ValueError:
+        return value
+
 class object_loader(object):
     def __init__(self, filename):
         self.vertices = []
@@ -21,12 +27,6 @@ class object_loader(object):
                 if prefix == 'v':
                     self.vertices.append(list(map(float, value.split(' '))))
                 elif prefix == 'f':
-                    self.faces.append([list(map(int, face.split('/'))) for face in value.split(' ')])
+                    self.faces.append([list(map(facePosMinus1, face.split('/'))) for face in value.split(' ')])
                 elif prefix == 'vt':
                     self.textures.append(list(map(float, value.split(' '))))
-
-        # for vertex in self.vertices:
-        #     print(vertex)
-
-        # for face in self.faces:
-        #     print(face)

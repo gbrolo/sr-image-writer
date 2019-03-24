@@ -20,6 +20,7 @@ def medium_shot():
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
     
     init_renderer()
     GL.glLookAt(
@@ -40,6 +41,7 @@ def dutch_angle():
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
     
     init_renderer()
     GL.glLookAt(
@@ -60,6 +62,7 @@ def low_shot():
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
     
     init_renderer()
     GL.glLookAt(
@@ -80,6 +83,7 @@ def high_shot():
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
     
     init_renderer()
     GL.glLookAt(
@@ -92,7 +96,7 @@ def high_shot():
 
     print('Output rendered to:  \'render.bmp\'')
 
-
+################################################# EXAMPLES ####################################################
 # Call any of 'DRAWING FUNCTIONS'
 medium_shot()
 # dutch_angle()

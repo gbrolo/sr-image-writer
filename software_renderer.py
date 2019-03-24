@@ -358,7 +358,7 @@ class Software_Renderer(object):
         # bounding boxes for bary
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
 
-        print('bboxes', min_bounding_box, max_bounding_box)
+        # print('bboxes', min_bounding_box, max_bounding_box)
 
         normal = vector_normal(cross_product(sub(point_B, point_A), sub(point_C, point_A)))
         grey = self.glShaderIntensity(normal, intensity)

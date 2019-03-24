@@ -52,7 +52,7 @@ def matrix_transform(v, view_port, projection, view, model):
         round(transformed_v_matrix[1][0] / transformed_v_matrix[3][0]),
         round(transformed_v_matrix[2][0] / transformed_v_matrix[3][0])
     ]
-    print(VERTEX_3(*transformed_v_matrix))
+    # print(VERTEX_3(*transformed_v_matrix))
     return VERTEX_3(*transformed_v_matrix)
 
 def matrix_mult(A, B):

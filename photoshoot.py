@@ -14,7 +14,7 @@ def init_renderer():
 ############################################### DRAWING FUNCTIONS ############################################
 def medium_shot():
     obj = 'deer/deer.obj'
-    translate = (0.5, 0.1, 0)
+    translate = (1.5, 0.05, -0.2)
     scale = (0.15, 0.18, 0.1)
     rotate = (0, 0, 0)
     intensity = 1    
@@ -35,7 +35,7 @@ def medium_shot():
 def dutch_angle():
     obj = 'deer/deer.obj'
     translate = (0, 0, 0)
-    scale = (0.08, 0.14, 0.1)
+    scale = (0.08, 0.16, 0.1)
     rotate = (0, 0, 0)
     intensity = 1    
     texture = texture_loader('deer/deer.bmp')

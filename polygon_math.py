@@ -44,16 +44,31 @@ def transform(v, t=(0,0,0), s=(1,1,1)):
         return VERTEX_3(round((v[0] + t[0]) * s[0]), round((v[1] + t[1]) * s[1]), round((v[2] + t[2]) * s[2]))
 
 def matrix_transform(v, view_port, projection, view, model):
-    augmented_v_matrix = [ v.x, v.y, v.z, 1 ]
-    transformed_v_matrix = view_port @ projection @ view @ model @ augmented_v_matrix
-    transformed_v_matrix = transformed_v_matrix.tolist()[0]
+    augmented_v_matrix = [ [v.x], [v.y], [v.z], [1] ]
+    transformed_v_matrix = matrix_mult(matrix_mult(matrix_mult(matrix_mult(view_port, projection), view), model), augmented_v_matrix)    
+    # transformed_v_matrix = transformed_v_matrix[0]
     transformed_v_matrix = [
-        round(transformed_v_matrix[0] / transformed_v_matrix[3]),
-        round(transformed_v_matrix[1] / transformed_v_matrix[3]),
-        round(transformed_v_matrix[2] / transformed_v_matrix[3])
+        round(transformed_v_matrix[0][0] / transformed_v_matrix[3][0]),
+        round(transformed_v_matrix[1][0] / transformed_v_matrix[3][0]),
+        round(transformed_v_matrix[2][0] / transformed_v_matrix[3][0])
     ]
     print(VERTEX_3(*transformed_v_matrix))
     return VERTEX_3(*transformed_v_matrix)
+
+def matrix_mult(A, B):
+    result = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ]    
+
+    for i in range(len(A)):        
+        for j in range(len(B[0])):
+            for k in range(len(B)):
+                result[i][j] += A[i][k] * B[k][j]
+
+    return result
 
 def barycentric(vector_A, vector_B, vector_C, P):
     b = cross_product(

@@ -33,6 +33,7 @@ class Software_Renderer(object):
         self.viewport_height = height
         self.viewport_x_offset = x
         self.viewport_y_offset = y
+        self.glLoadViewPortMatrix()
 
     def glClear(self, r=0, g=0, b=0):
         self.glClearColor(r, g, b)
@@ -259,87 +260,86 @@ class Software_Renderer(object):
         y = vector_normal(cross_product(z, x))
 
         self.glLoadViewMatrix(x, y, z, c)
-        self.glLoadProjectionMatrix(-1 / vector_length(sub(e, c)))
-        self.glLoadViewPortMatrix()
+        self.glLoadProjectionMatrix(-1 / vector_length(sub(e, c)))        
 
     def glLoadModelMatrix(self, t=(0,0,0), s=(1,1,1), r=(0,0,0)):
         t = VERTEX_3(*t)
         s = VERTEX_3(*s)
         r = VERTEX_3(*r)
 
-        translation_matrix = np.matrix([
+        translation_matrix = [
             [1, 0, 0, t.x],
             [0, 1, 0, t.y],
             [0, 0, 1, t.z],
             [0, 0, 0,   1]
-        ])
+        ]
 
         a = r.x
-        r_matrix_x = np.matrix([
+        r_matrix_x = [
             [1,          0,          0,  0],
             [0,     cos(a),    -sin(a),  0],
             [0,     sin(a),     cos(a),  0],
             [0,          0,          0,  1]
-        ])
+        ]
 
         a = r.y
-        r_matrix_y = np.matrix([
+        r_matrix_y = [
             [cos(a),    0,  -sin(a),    0],
             [     0,    1,        0,    0],
             [-sin(a),   0,   cos(a),    0],
             [0,         0,        0,    1]
-        ])
+        ]
 
         a = r.z
-        r_matrix_z = np.matrix([
+        r_matrix_z = [
             [cos(a),    -sin(a),    0,  0],
             [sin(a),     cos(a),    0,  0],
             [     0,          0,    1,  0],
             [     0,          0,    0,  1]
-        ])
+        ]
 
-        rotation_matrix = r_matrix_x @ r_matrix_y @ r_matrix_z
-        scale_matrix = np.matrix([
+        rotation_matrix = matrix_mult(matrix_mult(r_matrix_x, r_matrix_y), r_matrix_z)
+        scale_matrix = [
             [s.x,     0,      0,    0],
             [  0,   s.y,      0,    0],
             [  0,     0,    s.z,    0],
             [  0,     0,      0,    1]
-        ])
+        ]
 
-        self.ModelMatrix = translation_matrix @ rotation_matrix @ scale_matrix
+        self.ModelMatrix = matrix_mult(matrix_mult(translation_matrix, rotation_matrix), scale_matrix)
 
     def glLoadViewMatrix(self, i, j, k, c):
-        M = np.matrix([
+        M = [
             [i.x,   i.y,    i.z,    0],
             [j.x,   j.y,    j.z,    0],
             [k.x,   k.y,    k.z,    0],
             [  0,     0,      0,    1]
-        ])
+        ]
 
-        O = np.matrix([
+        O = [
             [1, 0, 0, -c.x],
             [0, 1, 0, -c.y],
             [0, 0, 1, -c.z],
             [0, 0, 0,    1]
-        ])
+        ]
 
-        self.ViewMatrix = M @ O
+        self.ViewMatrix = matrix_mult(M, O)
 
     def glLoadProjectionMatrix(self, k):
-        self.ProjectionMatrix = np.matrix([
+        self.ProjectionMatrix = [
             [1, 0, 0, 0],
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, k, 1]
-        ])
+        ]
 
     def glLoadViewPortMatrix(self):
-        self.ViewPortMatrix = np.matrix([
-            [self.width / 2,                  0,      0,     self.width / 2],
-            [             0,    self.height / 2,      0,    self.height / 2],
-            [             0,                  0,    128,                128],
-            [             0,                  0,      0,                  1]
-        ])
+        self.ViewPortMatrix = [
+            [self.viewport_width / 2,                           0,      0,     self.viewport_width / 2],
+            [                      0,    self.viewport_height / 2,      0,    self.viewport_height / 2],
+            [                      0,                           0,    128,                         128],
+            [                      0,                           0,      0,                           1]
+        ]
 
     def glShaderIntensity(self, normal, intensity):
         return round(255 * dot_product(normal, VERTEX_3(0,0,intensity)))

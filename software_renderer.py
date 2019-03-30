@@ -18,6 +18,7 @@ class Software_Renderer(object):
         self.gl_color = color(255, 255, 255)
         self.glInitTexParams()
         self.active_shader = self.glSetGouradShader
+        self.active_shader_no_tex = self.glSetGouradShaderNoTexture
 
     def glInitTexParams(self):
         self.tex = None
@@ -247,9 +248,9 @@ class Software_Renderer(object):
                     tex_vertex = VERTEX_3(*model.textures[fi[1]])
                     vertex_buffer.append(tex_vertex)
 
-                for fi in face:
-                    normal_vertex = VERTEX_3(*model.normals[fi[2]])
-                    vertex_buffer.append(normal_vertex)
+            for fi in face:
+                normal_vertex = VERTEX_3(*model.normals[fi[2]])
+                vertex_buffer.append(normal_vertex)
 
         self.active_v_array = iter(vertex_buffer)        
 
@@ -423,14 +424,43 @@ class Software_Renderer(object):
                     if x < 0 or y < 0:
                         continue
 
+                    colour_grey = self.active_shader_no_tex(
+                        self,                        
+                        barycentric_coords=(b1, b2, b3),                        
+                        varying_normals=(normal_A, normal_B, normal_C),
+                        intensity=intensity
+                    )
+
                     # if x < len(self.zBuffer) and y < len(self.zBuffer[x]) and z > self.zBuffer[y][x]:
                     try:
                         if z > self.zBuffer[y][x]:
                             # print('about to draw point at: (x,y)' + str(x) + ', ' + str(y) + ', ' + '. Normalized: ' + str(self.glGetNormalizedXCoord(x)) + str(self.glGetNormalizedYCoord(y)))
-                            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), color(grey, grey, grey))
+                            self.glVertex(self.glGetNormalizedXCoord(x), self.glGetNormalizedYCoord(y), colour_grey)
                             self.zBuffer[y][x] = z
                     except:
                         pass
+
+    def glSetGouradShaderNoTexture(self, obj, **kwargs):
+        b1, b2, b3 = kwargs['barycentric_coords']                
+        normal_A, normal_B, normal_C = kwargs['varying_normals']
+
+        norm_x = normal_A.x * b1 + normal_B.x * b2 + normal_C.x * b3
+        norm_y = normal_A.y * b1 + normal_B.y * b2 + normal_C.y * b3
+        norm_z = normal_A.z * b1 + normal_B.z * b2 + normal_C.z * b3
+
+        norm = VERTEX_3(norm_x, norm_y, norm_z)        
+
+        texture_color = color(255, 255, 255)
+        tex_intensity = dot_product(norm, VERTEX_3(0, 0, kwargs['intensity']))
+
+        try:
+            return color(
+                int(texture_color[2] * tex_intensity) if (texture_color[0] * tex_intensity > 0) else 0,
+                int(texture_color[1] * tex_intensity) if (texture_color[1] * tex_intensity > 0) else 0,
+                int(texture_color[0] * tex_intensity) if (texture_color[2] * tex_intensity > 0) else 0
+            )
+        except:
+            pass
 
     def glSetGouradShader(self, obj, **kwargs):
         b1, b2, b3 = kwargs['barycentric_coords']

@@ -81,3 +81,19 @@ def barycentric(vector_A, vector_B, vector_C, P):
     else:
         return (1 - (b[0] + b[1]) / b[2], b[1] / b[2], b[0] / b[2])
 
+def getBaryCoords(vector_A, vector_B, vector_C, min_bounding_box, max_bounding_box):
+    transform = np.linalg.inv(
+        [
+            [vector_A.x, vector_B.x, vector_C.x],
+            [vector_A.y, vector_B.y, vector_C.y],
+            [         1,          1,          1]
+        ]
+    )
+
+    bounding_box_grid = np.mgrid[
+        min_bounding_box.x:max_bounding_box.x,
+        min_bounding_box.y:max_bounding_box.y
+    ].reshape(2, -1)
+    bounding_box_grid = np.vstack((bounding_box_grid, numpy.ones((1, bounding_box_grid.shape[1]))))
+    
+    return np.transpose(np.dot(transform, bounding_box_grid))

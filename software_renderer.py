@@ -17,6 +17,7 @@ class Software_Renderer(object):
         self.pixels = []
         self.gl_color = color(255, 255, 255)
         self.glInitTexParams()
+        self.active_shader = self.glSetGouradShader
 
     def glInitTexParams(self):
         self.tex = None
@@ -246,6 +247,10 @@ class Software_Renderer(object):
                     tex_vertex = VERTEX_3(*model.textures[fi[1]])
                     vertex_buffer.append(tex_vertex)
 
+                for fi in face:
+                    normal_vertex = VERTEX_3(*model.normals[fi[2]])
+                    vertex_buffer.append(normal_vertex)
+
         self.active_v_array = iter(vertex_buffer)        
 
         try:
@@ -355,6 +360,11 @@ class Software_Renderer(object):
             tex_v_B = next(self.active_v_array)
             tex_v_C = next(self.active_v_array)
 
+        # normals
+        normal_A = next(self.active_v_array)
+        normal_B = next(self.active_v_array)
+        normal_C = next(self.active_v_array)
+
         # bounding boxes for bary
         min_bounding_box, max_bounding_box = bounding_box(point_A, point_B, point_C)
 
@@ -380,7 +390,16 @@ class Software_Renderer(object):
                     tex_y_pos = (tex_v_A.y * b1) + (tex_v_B.y * b2) + (tex_v_C.y * b3)
 
                     # replace default color with texture
-                    colour = self.active_tex.get_texture_color(tex_x_pos, tex_y_pos, tex_intensity)
+                    #colour = self.active_tex.get_texture_color(tex_x_pos, tex_y_pos, tex_intensity)
+
+                    colour = self.active_shader(
+                        self,
+                        triangle=(point_A, point_B, point_C),
+                        barycentric_coords=(b1, b2, b3),
+                        texture_coords=(tex_x_pos, tex_y_pos),
+                        varying_normals=(normal_A, normal_B, normal_C),
+                        intensity=intensity
+                    )
 
                     z = (point_A.z * b1) + (point_B.z * b2) + (point_C.z * b3)
 
@@ -412,6 +431,27 @@ class Software_Renderer(object):
                             self.zBuffer[y][x] = z
                     except:
                         pass
+
+    def glSetGouradShader(self, obj, **kwargs):
+        b1, b2, b3 = kwargs['barycentric_coords']
+        tex_x_pos, tex_y_pos = kwargs['texture_coords']
+        texture_color = obj.active_tex.get_texture_color(tex_x_pos, tex_y_pos)
+        normal_A, normal_B, normal_C = kwargs['varying_normals']
+
+        intensity_point_A, intensity_point_B, intensity_point_C = [
+            dot_product(normal, VERTEX_3(0,0,kwargs['intensity'])) for normal in (normal_A, normal_B, normal_C)
+        ]
+
+        tex_intensity = (b1*intensity_point_A) + (b2*intensity_point_B) + (b3*intensity_point_C)
+
+        try:
+            return color(
+                int(texture_color[2] * tex_intensity) if (texture_color[0] * tex_intensity > 0) else 0,
+                int(texture_color[1] * tex_intensity) if (texture_color[1] * tex_intensity > 0) else 0,
+                int(texture_color[0] * tex_intensity) if (texture_color[2] * tex_intensity > 0) else 0
+            )
+        except:
+            pass
 
     def glFinish(self):
         f = open(self.filename, 'bw')

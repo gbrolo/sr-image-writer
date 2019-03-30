@@ -98,7 +98,7 @@ def high_shot():
 
 ################################################# EXAMPLES ####################################################
 # Call any of 'DRAWING FUNCTIONS'
-medium_shot()
+# medium_shot()
 # dutch_angle()
 # low_shot()
-# high_shot()
+high_shot()

@@ -9,6 +9,7 @@ class object_loader(object):
         self.vertices = []
         self.faces = []
         self.textures = []
+        self.normals = []
 
         with open(filename) as f:
             self.document_lines = f.read().splitlines()
@@ -30,3 +31,5 @@ class object_loader(object):
                     self.faces.append([list(map(facePosMinus1, face.split('/'))) for face in value.split(' ')])
                 elif prefix == 'vt':
                     self.textures.append(list(map(float, value.split(' '))))
+                elif prefix == 'vn':
+                    self.normals.append(list(map(float, value.split(' '))))

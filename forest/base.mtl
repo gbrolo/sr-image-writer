@@ -1,0 +1,15 @@
+# Blender MTL File: 'base_2.blend'
+# Material Count: 1
+
+newmtl 13_-_Default
+Ns 19.607843
+Ka 1.000000 1.000000 1.000000
+Kd 0.470588 0.470588 0.470588
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.000000
+illum 1
+map_Bump -bm 0.350042 C:\\Users\\Samsung\\3D Objects\\forest-place\\source\\Forest Place\\Final_NMap1.jpg
+map_Kd C:\\Users\\Samsung\\3D Objects\\forest-place\\source\\Forest Place\\LR_A1DiffuseMap.png
+map_d C:\\Users\\Samsung\\3D Objects\\forest-place\\source\\Forest Place\\LR_A1DiffuseMap.png

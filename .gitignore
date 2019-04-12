@@ -1,1 +1,6 @@
 *.pyc
+forest/*.blend
+forest/*.blend1
+forest/*.mtl
+forest/*.jpg
+forest/*.png

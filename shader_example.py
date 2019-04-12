@@ -8,7 +8,7 @@ def init_renderer():
     GL.glInit()
     GL.glCreateWindow(1920, 1080)
     GL.glViewPort(0, 0, 1920, 1080)
-    GL.glClear(1, 1, 1)
+    GL.glClear(0, 0, 0)
     GL.glColor(1, 1, 1)
 
 ############################################### DRAWING FUNCTIONS ############################################
@@ -60,7 +60,7 @@ def forest():
     
     init_renderer()
     GL.glLookAt(
-        VERTEX_3(10, 25, 28), 
+        VERTEX_3(10, 25, 30), 
         VERTEX_3(0, -0.2, 0), 
         VERTEX_3(0, 1, 0)
     )
@@ -79,12 +79,12 @@ def forest():
     GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
 
     # third obj
-    obj = 'forest/monolith.obj'
+    obj = 'forest/bhudist_stone.obj'
     translate = (0.75, 0, 0)
     scale = (0.1, 0.15, 0.1)
     rotate = (0, 0, 0)
     intensity = 1    
-    texture = texture_loader('forest/monolith.bmp')
+    texture = texture_loader('forest/bhudist_stone.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     print('Please wait...')
     
@@ -92,7 +92,7 @@ def forest():
 
     # fourth obj
     obj = 'forest/rock.obj'
-    translate = (-0.3, 0.1, -0.45)
+    translate = (-0.3, -0.3, 1)
     scale = (0.1, 0.15, 0.1)
     rotate = (0, 0, 0)
     intensity = 1    
@@ -102,13 +102,61 @@ def forest():
     
     GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
 
-    # fourth obj
-    obj = 'forest/rock.obj'
-    translate = (0.95, 0.2, 0.1)
+    # fifth obj
+    obj = 'forest/log_normals.obj'
+    translate = (0.75, -0.08, 1)
     scale = (0.1, 0.15, 0.1)
-    rotate = (0.5, 0.2, 0.3)
+    rotate = (0, 0.1, 0)
     intensity = 1    
-    texture = texture_loader('forest/rock.bmp')
+    texture = texture_loader('forest/log.bmp')
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
+    
+    GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
+
+    # sixth obj
+    obj = 'forest/wall.obj'
+    translate = (1.35, 3.6, 3.2)
+    scale = (0.1, 0.15, 0.1)
+    rotate = (0, 0.1, 0)
+    intensity = 1    
+    texture = texture_loader('forest/wall.bmp')
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
+    
+    GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)    
+
+    # seventh obj
+    obj = 'forest/fern.obj'
+    translate = (-0.50, -0.35, 1)
+    scale = (0.1, 0.15, 0.1)
+    rotate = (0, 0, 0)
+    intensity = 1    
+    texture = texture_loader('forest/fern.bmp')
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
+    
+    GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
+
+    # eight obj
+    obj = 'forest/cobblestone.obj'
+    translate = (-0.1, -0.60, 1)
+    scale = (0.1, 0.15, 0.1)
+    rotate = (0, 0, 0)
+    intensity = 1    
+    texture = texture_loader('forest/cobblestone.bmp')
+    print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
+    print('Please wait...')
+    
+    GL.glLoadObj(obj, translate, scale, rotate, intensity, texture)
+
+    # eight obj
+    obj = 'forest/cobblestone.obj'
+    translate = (0.8, -0.60, 1)
+    scale = (0.1, 0.15, 0.1)
+    rotate = (0, 0, 0)
+    intensity = 1    
+    texture = texture_loader('forest/cobblestone.bmp')
     print('Rendering:   ' + obj + '\ntranslate:   ' + str(translate) + '\nscale:   ' + str(scale))
     print('Please wait...')
     

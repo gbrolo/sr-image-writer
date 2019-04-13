@@ -3,4 +3,4 @@
 A software renderer made in Python.
 
 ## Examples
-Run ```photoshoot.py``` and comment/uncomment last lines for examples.
+Run ```project.py``` to run project.
